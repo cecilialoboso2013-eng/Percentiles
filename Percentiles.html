@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Calculadora de Percentiles</title>
+<style>
+body{margin:0;font-family:Calibri,Arial,sans-serif;background:#f6f8fc;color:#1f2937}
+header{background:#1f4e8c;color:#fff;padding:20px}.wrap{max-width:1200px;margin:auto;padding:18px}
+.card{background:#fff;border:1px solid #cbd5e1;border-radius:14px;padding:16px;margin-bottom:14px}
+h2,h3{color:#1f4e8c}label{display:block;font-weight:700;margin:9px 0 6px}
+input,textarea{width:100%;padding:10px;border:1px solid #b8c4d1;border-radius:8px;font:inherit}
+textarea{min-height:110px}.help{font-size:13px;color:#667085;line-height:1.4;margin-top:5px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button{border:0;border-radius:8px;padding:10px 14px;font-weight:700;background:#1f4e8c;color:#fff;cursor:pointer}
+.secondary{background:#edf2f9;color:#1f4e8c;border:1px solid #cad6e3}.danger{background:#f8e8e8;color:#a63a3a;border:1px solid #e8bebe}
+.note{background:#fff7df;border:1px solid #ecd58f;border-radius:10px;padding:12px;line-height:1.5}
+.ok{background:#eaf6ef;border:1px solid #b9ddc8;color:#225f45;border-radius:9px;padding:10px}.error{background:#fdeeee;border:1px solid #edc2c2;color:#8d2e2e;border-radius:9px;padding:10px}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}@media(max-width:850px){.metrics{grid-template-columns:repeat(2,1fr)}}
+.metric{border:1px solid #cbd5e1;border-radius:9px;padding:10px;text-align:center;background:#fbfcfe}.metric b{display:block;color:#1f4e8c;font-size:13px}.metric span{font-size:20px;font-weight:700}
+.ordered{border:1px dashed #bcc8d5;background:#fafafa;border-radius:9px;padding:10px;line-height:1.6;word-break:break-word}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.result{background:#f8fbff;border-left:5px solid #1f4e8c;padding:12px;border-radius:8px;line-height:1.55;font-size:18px}
+.tablewrap{max-height:620px;overflow:auto;border:1px solid #cbd5e1;border-radius:9px}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid #d5dde7;padding:8px;text-align:center}th{background:#e7eff9;color:#173d70;position:sticky;top:0}
+.hi{background:#fff4cf;font-weight:700}.tag{display:inline-block;background:#e8eff8;color:#1f4e8c;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;margin:2px}
+footer{text-align:center;color:#667085;padding:18px;font-size:13px}
+@media print{header,.btns,.note,.search{display:none!important}.tablewrap{max-height:none;overflow:visible;border:0}th{position:static}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header><h1>Calculadora de Percentiles</h1><div>Datos no agrupados · Posición y valor de P₁ a P₉₉</div></header>
+<div class="wrap">
+
+<div class="note"><b>Criterio utilizado:</b> Posición de Pm = (n·m)/100. Si la posición es decimal, se toma la parte entera y se suma 1. Si es exacta, se conserva.</div>
+
+<div class="card">
+<h2>1. Ingresa los datos</h2>
+<label>Nombre del conjunto</label><input id="nombre" value="Conjunto de datos">
+<label>Datos no agrupados</label><textarea id="datos" placeholder="18, 12, 25, 20, 15, 24, 21, 19, 26..."></textarea>
+<div class="help">Puedes separar por comas, espacios, punto y coma o saltos de línea. Para decimales con coma usa punto y coma: 4,5; 5,2; 6,1.</div>
+<div class="btns"><button onclick="calcular()">Calcular P₁ a P₉₉</button><button class="secondary" onclick="ejemplo()">Cargar ejemplo</button><button class="secondary" onclick="csv()">Descargar CSV</button><button class="secondary" onclick="window.print()">Imprimir / PDF</button><button class="danger" onclick="limpiar()">Limpiar</button></div>
+<div id="msg" style="margin-top:10px"></div>
+</div>
+
+<div id="res" style="display:none">
+<div class="card">
+<h2>2. Datos ordenados</h2><div id="ordenados" class="ordered"></div>
+<div class="metrics" style="margin-top:10px">
+<div class="metric"><b>n</b><span id="n"></span></div>
+<div class="metric"><b>Mínimo</b><span id="min"></span></div>
+<div class="metric"><b>Máximo</b><span id="max"></span></div>
+<div class="metric"><b>Q₁ = P₂₅</b><span id="q1"></span></div>
+<div class="metric"><b>Q₂ = P₅₀</b><span id="q2"></span></div>
+<div class="metric"><b>Q₃ = P₇₅</b><span id="q3"></span></div>
+</div>
+</div>
+
+<div class="card search">
+<h2>3. Consultar un percentil específico</h2>
+<div class="grid2">
+<div><label>Percentil (1 a 99)</label><input id="buscar" type="number" min="1" max="99" value="65"></div>
+<div style="display:flex;align-items:end"><button style="width:100%" onclick="consultar()">Mostrar percentil</button></div>
+</div>
+<div id="consulta" class="result" style="margin-top:12px"></div>
+</div>
+
+<div class="card">
+<h2>4. Tabla completa</h2>
+<div><span class="tag">P₂₅ = Q₁</span><span class="tag">P₅₀ = Q₂</span><span class="tag">P₇₅ = Q₃</span></div>
+<div class="tablewrap">
+<table><thead><tr><th>Percentil</th><th>Cálculo</th><th>Posición obtenida</th><th>Regla</th><th>Posición final</th><th>Valor</th></tr></thead><tbody id="tb"></tbody></table>
+</div>
+</div>
+</div>
+</div>
+<footer>Herramienta educativa de Matemática · Medidas de posición · Funciona sin internet</footer>
+
+<script>
+let tabla=[], orden=[];
+
+function fmt(x){if(!Number.isFinite(x))return "—";let r=Math.round(x*1000000)/1000000;return String(r).replace(".",",")}
+function parseDatos(t){
+ t=String(t||"").trim(); if(!t)return[];
+ if(/[;\n]/.test(t))return t.split(/[;\n]+/).map(x=>x.trim()).filter(Boolean).map(x=>Number(x.replace(/\s+/g,"").replace(",","."))).filter(Number.isFinite);
+ return t.split(/[,\s]+/).map(x=>x.trim()).filter(Boolean).map(Number).filter(Number.isFinite)
+}
+function calc(m){
+ let bruto=orden.length*m/100, exacta=Number.isInteger(bruto), pf=exacta?bruto:Math.floor(bruto)+1;
+ return {m,bruto,exacta,pf,valor:orden[pf-1],regla:exacta?"Exacta: se conserva":"Decimal: parte entera + 1"}
+}
+function mensaje(t,cl="error"){msg.innerHTML=`<div class="${cl}">${t}</div>`}
+function calcular(){
+ msg.innerHTML="";
+ let d=parseDatos(datos.value);
+ if(d.length<2){mensaje("Ingresa al menos 2 datos numéricos.");return}
+ orden=[...d].sort((a,b)=>a-b); tabla=[];for(let m=1;m<=99;m++)tabla.push(calc(m));
+ ordenados.textContent=orden.map(fmt).join(", ");n.textContent=orden.length;min.textContent=fmt(orden[0]);max.textContent=fmt(orden.at(-1));
+ q1.textContent=fmt(tabla[24].valor);q2.textContent=fmt(tabla[49].valor);q3.textContent=fmt(tabla[74].valor);
+ llenar();res.style.display="block";consultar();mensaje("Percentiles P₁ a P₉₉ calculados correctamente.","ok");
+ localStorage.setItem("pct_datos",datos.value);localStorage.setItem("pct_nombre",nombre.value)
+}
+function llenar(){
+ tb.innerHTML="";
+ tabla.forEach(p=>{
+  let tr=document.createElement("tr");if([25,50,75].includes(p.m))tr.className="hi";
+  let lab=p.m===25?"P₂₅ = Q₁":p.m===50?"P₅₀ = Q₂":p.m===75?"P₇₅ = Q₃":`P${p.m}`;
+  tr.innerHTML=`<td>${lab}</td><td>(${orden.length} · ${p.m}) ÷ 100</td><td>${fmt(p.bruto)}</td><td>${p.regla}</td><td>${p.pf}</td><td><b>${fmt(p.valor)}</b></td>`;tb.appendChild(tr)
+ })
+}
+function consultar(){
+ if(!tabla.length)return;let m=parseInt(buscar.value,10);
+ if(!Number.isInteger(m)||m<1||m>99){consulta.textContent="Escribe un percentil entre 1 y 99.";return}
+ let p=tabla[m-1],extra=m===25?" Además, P₂₅ = Q₁.":m===50?" Además, P₅₀ = Q₂ o mediana.":m===75?" Además, P₇₅ = Q₃.":"";
+ consulta.innerHTML=`<b>P${m}</b><br>Posición = (${orden.length} · ${m}) ÷ 100 = <b>${fmt(p.bruto)}</b>.<br>${p.exacta?`La posición es exacta, por lo tanto se conserva la posición <b>${p.pf}</b>.`:`La posición es decimal; se toma la parte entera y se suma 1. Posición final: <b>${p.pf}</b>.`}<br>El dato ubicado en la posición ${p.pf} es <b>${fmt(p.valor)}</b>.<br>Por lo tanto, <b>P${m} = ${fmt(p.valor)}</b>.${extra}`
+}
+function ejemplo(){nombre.value="Puntajes de una actividad";datos.value="18, 12, 25, 20, 15, 24, 21, 19, 26, 23, 17, 22, 28, 14, 27";buscar.value=65;calcular()}
+function limpiar(){datos.value="";nombre.value="Conjunto de datos";res.style.display="none";msg.innerHTML="";tabla=[];orden=[]}
+function csv(){
+ if(!tabla.length){mensaje("Primero calcula los percentiles.");return}
+ let rows=[["Percentil","Calculo","Posicion obtenida","Regla","Posicion final","Valor"]];
+ tabla.forEach(p=>rows.push([`P${p.m}`,`(${orden.length}*${p.m})/100`,p.bruto,p.regla,p.pf,p.valor]));
+ let txt=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+ let blob=new Blob(["\ufeff"+txt],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=u;a.download="tabla_percentiles.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u)
+}
+window.onload=()=>{if(localStorage.pct_datos)datos.value=localStorage.pct_datos;if(localStorage.pct_nombre)nombre.value=localStorage.pct_nombre}
+</script>
+</body>
+</html>
